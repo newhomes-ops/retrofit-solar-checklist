@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retrofit Solar Design Checklist</title>
+<style>
+  :root{
+    --navy:#0b2545; --blue:#134074; --accent:#f2a900; --green:#1b8a5a;
+    --red:#c0392b; --bg:#f4f6f8; --card:#ffffff; --border:#dde3ea; --text:#1c2b39;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:0 0 60px;
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    color:#fff; padding:28px 24px 22px; position:sticky; top:0; z-index:20;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
+  header h1{margin:0 0 4px; font-size:1.5rem;}
+  header p{margin:0; opacity:.85; font-size:.9rem;}
+  .progress-wrap{max-width:1100px; margin:16px auto 0;}
+  .progress-bar-outer{
+    background:rgba(255,255,255,.25); border-radius:8px; height:14px; overflow:hidden;
+  }
+  .progress-bar-inner{
+    height:100%; background:var(--accent); width:0%; transition:width .3s ease;
+  }
+  .progress-label{font-size:.8rem; margin-top:6px; opacity:.9; display:flex; justify-content:space-between;}
+  .toolbar{
+    max-width:1100px; margin:14px auto 0; display:flex; gap:10px; flex-wrap:wrap;
+  }
+  button{
+    cursor:pointer; border:none; border-radius:6px; padding:9px 16px; font-size:.85rem;
+    font-weight:600; transition:filter .15s ease;
+  }
+  button:hover{filter:brightness(1.08);}
+  .btn-primary{background:var(--accent); color:#1c2b39;}
+  .btn-secondary{background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4);}
+  .btn-danger{background:rgba(192,57,43,.85); color:#fff;}
+  main{max-width:1100px; margin:24px auto; padding:0 20px;}
+  .section{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    margin-bottom:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .section-header{
+    display:flex; align-items:center; justify-content:space-between; padding:14px 18px;
+    cursor:pointer; background:#fbfcfd; border-bottom:1px solid var(--border);
+  }
+  .section-header:hover{background:#f1f4f7;}
+  .section-title{display:flex; align-items:center; gap:10px; font-weight:700; color:var(--navy);}
+  .section-count{font-size:.78rem; font-weight:600; color:#5a6b7d; background:#eef1f4; padding:3px 9px; border-radius:12px;}
+  .chevron{transition:transform .2s ease; color:#8a97a6;}
+  .section.collapsed .chevron{transform:rotate(-90deg);}
+  .section-body{padding:6px 18px 16px;}
+  .section.collapsed .section-body{display:none;}
+  .subgroup-title{
+    font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; color:var(--blue);
+    font-weight:700; margin:14px 0 6px;
+  }
+  .item{
+    display:flex; align-items:flex-start; gap:10px; padding:7px 4px; border-radius:6px;
+  }
+  .item:hover{background:#f7f9fb;}
+  .item input{margin-top:3px; width:17px; height:17px; accent-color:var(--green); cursor:pointer; flex-shrink:0;}
+  .item label{cursor:pointer; font-size:.92rem; line-height:1.4;}
+  .item.checked label{color:#8a97a6; text-decoration:line-through;}
+  .gates-table{width:100%; border-collapse:collapse; font-size:.88rem; margin-top:6px;}
+  .gates-table th, .gates-table td{border:1px solid var(--border); padding:9px 12px; text-align:left;}
+  .gates-table th{background:#eef1f4; color:var(--navy);}
+  .summary-overlay{
+    display:none; position:fixed; inset:0; background:rgba(11,37,69,.55); z-index:50;
+    align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;
+  }
+  .summary-overlay.open{display:flex;}
+  .summary-card{
+    background:#fff; border-radius:10px; max-width:720px; width:100%; padding:26px 28px;
+    max-height:85vh; overflow-y:auto;
+  }
+  .summary-card h2{margin-top:0; color:var(--navy);}
+  .summary-stats{display:flex; gap:14px; flex-wrap:wrap; margin:14px 0 20px;}
+  .stat-box{
+    flex:1; min-width:120px; background:#f4f6f8; border-radius:8px; padding:12px 14px; text-align:center;
+  }
+  .stat-box .num{font-size:1.4rem; font-weight:800; color:var(--navy);}
+  .stat-box .lbl{font-size:.75rem; color:#5a6b7d; margin-top:2px;}
+  .summary-section{margin-bottom:14px;}
+  .summary-section h3{font-size:.9rem; color:var(--blue); margin:0 0 6px; border-bottom:1px solid var(--border); padding-bottom:4px;}
+  .summary-section ul{margin:0; padding-left:20px; font-size:.85rem; line-height:1.6;}
+  .gate-status{font-size:.78rem; font-weight:700; padding:2px 8px; border-radius:10px;}
+  .gate-ready{background:#e3f5ec; color:var(--green);}
+  .gate-notready{background:#fdecea; color:var(--red);}
+  .close-row{display:flex; justify-content:flex-end; gap:10px; margin-top:18px;}
+  .close-row button{background:var(--navy); color:#fff;}
+  .empty-note{font-size:.85rem; color:var(--green); font-weight:600;}
+  @media print{
+    header, .toolbar, .close-row, .section-header .chevron{display:none !important;}
+    .summary-overlay{position:static; background:none; padding:0;}
+    .summary-card{max-height:none; box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Retrofit Solar Design Checklist</h1>
+  <p>Site review through permit-ready plans — code compliance, constructability, and quality</p>
+  <div class="progress-wrap">
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
+    <div class="progress-label"><span id="progressText">0 / 0 items complete</span><span id="progressPct">0%</span></div>
+  </div>
+  <div class="toolbar">
+    <button class="btn-primary" id="summaryBtn">Generate Summary</button>
+    <button class="btn-secondary" id="expandBtn">Expand All</button>
+    <button class="btn-secondary" id="collapseBtn">Collapse All</button>
+    <button class="btn-danger" id="resetBtn">Reset Checklist</button>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<div class="summary-overlay" id="summaryOverlay">
+  <div class="summary-card">
+    <h2>Checklist Summary Report</h2>
+    <div id="summaryMeta" style="font-size:.8rem;color:#5a6b7d;"></div>
+    <div class="summary-stats" id="summaryStats"></div>
+    <div id="gateStatus" class="summary-section"></div>
+    <div id="outstandingItems"></div>
+    <div class="close-row">
+      <button class="btn-secondary" style="background:#eef1f4;color:#1c2b39;border:1px solid var(--border);" onclick="window.print()">Print</button>
+      <button onclick="document.getElementById('summaryOverlay').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  { id:'s1', title:'1. Project Review', items:[
+    'Verify customer information and project address.',
+    'Confirm utility provider and service voltage.',
+    'Review contract scope.',
+    'Confirm system size (kW DC / AC).',
+    'Verify module, inverter, ESS, and BOS equipment.',
+    'Review AHJ and utility requirements.'
+  ]},
+  { id:'s2', title:'2. Site Evaluation', groups:[
+    { name:'Roof', items:[
+      'Verify roof type and material.',
+      'Confirm roof pitch.',
+      'Identify all roof planes.',
+      'Check roof condition.',
+      'Verify fire setbacks.',
+      'Identify obstructions (vents, chimneys, skylights, HVAC, satellite dishes).',
+      'Verify roof access requirements.'
+    ]},
+    { name:'Structural', items:[
+      'Review structural documentation.',
+      'Verify rafter/truss spacing.',
+      'Determine attachment spacing.',
+      'Check unsupported spans.',
+      'Verify point load limitations.'
+    ]}
+  ]},
+  { id:'s3', title:'3. Shade Analysis', items:[
+    'Review shade report.',
+    'Confirm optimal array location.',
+    'Evaluate seasonal shading.',
+    'Confirm production impact.'
+  ]},
+  { id:'s4', title:'4. PV Layout', items:[
+    'Modules fit within setbacks.',
+    'Maintain required walkways.',
+    'Verify module orientation.',
+    'Confirm row spacing.',
+    'Check edge clearances.',
+    'Balance aesthetics when multiple roof planes are used.'
+  ]},
+  { id:'s5', title:'5. Mounting System', items:[
+    'Verify rail type.',
+    'Select attachment type.',
+    'Verify flashing compatibility.',
+    'Confirm attachment spacing.',
+    'Review uplift requirements.'
+  ]},
+  { id:'s6', title:'6. Electrical Design', groups:[
+    { name:'Modules', items:[
+      'Verify string configuration.',
+      'Check maximum system voltage.',
+      'Verify cold temperature calculations.',
+      'Confirm conductor ampacity.'
+    ]},
+    { name:'Inverters', items:[
+      'Verify inverter sizing.',
+      'Confirm MPPT configuration.',
+      'Check AC output rating.'
+    ]},
+    { name:'Rapid Shutdown', items:[
+      'Verify required equipment.',
+      'Confirm initiator location.',
+      'Add required labeling.'
+    ]},
+    { name:'Conductors', items:[
+      'Verify conductor sizes.',
+      'Check voltage drop.',
+      'Confirm conduit fill.',
+      'Verify grounding conductors.'
+    ]}
+  ]},
+  { id:'s7', title:'7. Existing Electrical Service', items:[
+    'Verify MSP rating.',
+    'Confirm busbar rating.',
+    'Check main breaker size.',
+    'Apply NEC 705 load-side calculations.',
+    'Verify feeder sizes.',
+    'Determine if derating is required.',
+    'Verify service equipment condition.',
+    'Confirm available breaker spaces.'
+  ]},
+  { id:'s8', title:'8. Battery Storage (If Applicable)', items:[
+    'Verify battery location.',
+    'Confirm required working clearances.',
+    'Check ventilation requirements.',
+    'Verify backup load configuration.',
+    'Review gateway/transfer equipment.',
+    'Confirm breaker sizing.',
+    'Verify communication equipment.'
+  ]},
+  { id:'s9', title:'9. Single Line Diagram', items:[
+    'Equipment ratings match BOM.',
+    'Wire sizes are correct.',
+    'Breaker sizes are correct.',
+    'Grounding is complete.',
+    'Labels and symbols are accurate.',
+    'Utility interconnection point identified.'
+  ]},
+  { id:'s10', title:'10. Site Plan', items:[
+    'Property lines shown.',
+    'Existing structures identified.',
+    'Equipment locations shown.',
+    'Disconnect locations identified.',
+    'Meter location shown.',
+    'Fire access maintained.'
+  ]},
+  { id:'s11', title:'11. Code Compliance', items:[
+    'NEC requirements satisfied.',
+    'IRC/IBC requirements verified.',
+    'Manufacturer installation requirements followed.',
+    'AHJ amendments reviewed.',
+    'Utility interconnection requirements satisfied.'
+  ]},
+  { id:'s12', title:'12. Permit Plan Review', items:[
+    'Cover sheet complete.',
+    'Equipment schedule accurate.',
+    'Structural notes included.',
+    'Electrical notes included.',
+    'Required placards shown.',
+    'Revision clouds applied (if applicable).',
+    'Sheet references correct.',
+    'All calculations included.'
+  ]},
+  { id:'s13', title:'13. Quality Assurance', items:[
+    'Equipment matches contract.',
+    'Equipment matches BOM.',
+    'Drawings are internally consistent.',
+    'No overlapping annotations.',
+    'Dimensions verified.',
+    'Spelling and formatting checked.',
+    'Final peer review completed.'
+  ]}
+];
+
+// Design gates mapped to the sections that must be complete for that gate to be "ready"
+const GATES = [
+  { stage:'Design Prep', deliverable:'Site review completed, equipment selected, roof layout finalized', sections:['s1','s2','s3','s4','s5'] },
+  { stage:'Engineering Review', deliverable:'Structural and electrical calculations verified', sections:['s6','s7','s8'] },
+  { stage:'Permit Plan Creation', deliverable:'Complete permit-ready drawing package', sections:['s9','s10'] },
+  { stage:'QA Review', deliverable:'Final quality check and code compliance verification', sections:['s11','s13'] },
+  { stage:'Release', deliverable:'Permit package issued to AHJ/Permit Team', sections:['s12'] }
+];
+
+const STORAGE_KEY = 'retrofitSolarChecklist_v1';
+let state = {};
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : {};
+  }catch(e){ state = {}; }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function flatItems(section){
+  if(section.items) return section.items.map((t,i)=>({key:section.id+'-i'+i, text:t}));
+  let out=[];
+  section.groups.forEach((g,gi)=>{
+    g.items.forEach((t,i)=>{ out.push({key:section.id+'-g'+gi+'-i'+i, text:t, group:g.name}); });
+  });
+  return out;
+}
+
+function renderMain(){
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  DATA.forEach(section=>{
+    const items = flatItems(section);
+    const wrap = document.createElement('div');
+    wrap.className = 'section';
+    wrap.id = 'wrap-'+section.id;
+
+    const header = document.createElement('div');
+    header.className = 'section-header';
+    header.innerHTML = `
+      <div class="section-title"><span class="chevron">▾</span><span>${section.title}</span></div>
+      <div class="section-count" id="count-${section.id}"></div>`;
+    header.addEventListener('click', ()=> wrap.classList.toggle('collapsed'));
+
+    const body = document.createElement('div');
+    body.className = 'section-body';
+
+    if(section.items){
+      section.items.forEach((text,i)=> body.appendChild(makeItem(section.id+'-i'+i, text)));
+    } else {
+      section.groups.forEach((g,gi)=>{
+        const gt = document.createElement('div');
+        gt.className='subgroup-title';
+        gt.textContent = g.name;
+        body.appendChild(gt);
+        g.items.forEach((text,i)=> body.appendChild(makeItem(section.id+'-g'+gi+'-i'+i, text)));
+      });
+    }
+
+    wrap.appendChild(header);
+    wrap.appendChild(body);
+    main.appendChild(wrap);
+  });
+
+  // Design gates reference table
+  const gateSection = document.createElement('div');
+  gateSection.className = 'section';
+  gateSection.innerHTML = `
+    <div class="section-header"><div class="section-title"><span class="chevron">▾</span><span>Recommended Design Gates (reference)</span></div></div>
+    <div class="section-body">
+      <table class="gates-table">
+        <thead><tr><th>Stage</th><th>Deliverable</th></tr></thead>
+        <tbody>
+          ${GATES.map(g=>`<tr><td>${g.stage}</td><td>${g.deliverable}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  gateSection.querySelector('.section-header').addEventListener('click', ()=> gateSection.classList.toggle('collapsed'));
+  main.appendChild(gateSection);
+}
+
+function makeItem(key, text){
+  const row = document.createElement('div');
+  row.className = 'item';
+  const checked = !!state[key];
+  if(checked) row.classList.add('checked');
+  row.innerHTML = `<input type="checkbox" id="${key}" ${checked?'checked':''}><label for="${key}">${text}</label>`;
+  row.querySelector('input').addEventListener('change', e=>{
+    state[key] = e.target.checked;
+    row.classList.toggle('checked', e.target.checked);
+    saveState();
+    updateProgress();
+  });
+  return row;
+}
+
+function sectionStats(section){
+  const items = flatItems(section);
+  const done = items.filter(it=>state[it.key]).length;
+  return { done, total: items.length, items };
+}
+
+function updateProgress(){
+  let totalDone=0, totalAll=0;
+  DATA.forEach(section=>{
+    const {done,total} = sectionStats(section);
+    totalDone += done; totalAll += total;
+    const el = document.getElementById('count-'+section.id);
+    if(el) el.textContent = `${done} / ${total}`;
+  });
+  const pct = totalAll ? Math.round((totalDone/totalAll)*100) : 0;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressText').textContent = `${totalDone} / ${totalAll} items complete`;
+  document.getElementById('progressPct').textContent = pct+'%';
+}
+
+function buildSummary(){
+  let totalDone=0, totalAll=0;
+  const outstandingBySection = [];
+  DATA.forEach(section=>{
+    const {done,total,items} = sectionStats(section);
+    totalDone+=done; totalAll+=total;
+    const missing = items.filter(it=>!state[it.key]);
+    if(missing.length){
+      outstandingBySection.push({title:section.title, missing});
+    }
+  });
+  const pct = totalAll ? Math.round((totalDone/totalAll)*100) : 0;
+
+  document.getElementById('summaryMeta').textContent =
+    'Generated ' + new Date().toLocaleString();
+
+  document.getElementById('summaryStats').innerHTML = `
+    <div class="stat-box"><div class="num">${pct}%</div><div class="lbl">Overall Complete</div></div>
+    <div class="stat-box"><div class="num">${totalDone}</div><div class="lbl">Items Checked</div></div>
+    <div class="stat-box"><div class="num">${totalAll-totalDone}</div><div class="lbl">Items Remaining</div></div>
+    <div class="stat-box"><div class="num">${outstandingBySection.length}</div><div class="lbl">Sections Incomplete</div></div>`;
+
+  // Gate readiness
+  const gateHtml = ['<h3>Design Gate Readiness</h3><ul>'];
+  GATES.forEach(g=>{
+    let done=0, total=0;
+    g.sections.forEach(sid=>{
+      const section = DATA.find(s=>s.id===sid);
+      const st = sectionStats(section);
+      done+=st.done; total+=st.total;
+    });
+    const ready = total>0 && done===total;
+    gateHtml.push(`<li><strong>${g.stage}</strong> — ${g.deliverable}
+      <span class="gate-status ${ready?'gate-ready':'gate-notready'}">${ready?'READY':`${done}/${total}`}</span></li>`);
+  });
+  gateHtml.push('</ul>');
+  document.getElementById('gateStatus').innerHTML = gateHtml.join('');
+
+  // Outstanding items
+  const outEl = document.getElementById('outstandingItems');
+  if(outstandingBySection.length===0){
+    outEl.innerHTML = '<div class="summary-section"><p class="empty-note">All items complete — checklist is 100% done.</p></div>';
+  } else {
+    outEl.innerHTML = '<div class="summary-section"><h3>Outstanding Items by Section</h3>' +
+      outstandingBySection.map(s=>`
+        <div style="margin-bottom:10px;">
+          <strong style="font-size:.85rem;">${s.title}</strong>
+          <ul>${s.missing.map(m=>`<li>${m.text}${m.group?` <em style="color:#8a97a6;">(${m.group})</em>`:''}</li>`).join('')}</ul>
+        </div>`).join('') + '</div>';
+  }
+}
+
+document.getElementById('summaryBtn').addEventListener('click', ()=>{
+  buildSummary();
+  document.getElementById('summaryOverlay').classList.add('open');
+});
+document.getElementById('summaryOverlay').addEventListener('click', e=>{
+  if(e.target.id==='summaryOverlay') e.target.classList.remove('open');
+});
+document.getElementById('expandBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('collapsed'));
+});
+document.getElementById('collapseBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.section').forEach(s=>s.classList.add('collapsed'));
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Reset all checklist progress? This cannot be undone.')){
+    state = {};
+    saveState();
+    renderMain();
+    updateProgress();
+  }
+});
+
+loadState();
+renderMain();
+updateProgress();
+</script>
+</body>
+</html>
