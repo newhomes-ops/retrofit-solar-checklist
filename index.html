@@ -95,6 +95,35 @@
   .close-row{display:flex; justify-content:flex-end; gap:10px; margin-top:18px;}
   .close-row button{background:var(--navy); color:#fff;}
   .empty-note{font-size:.85rem; color:var(--green); font-weight:600;}
+  .job-info{
+    max-width:1100px; margin:16px auto 0; display:flex; gap:14px; flex-wrap:wrap;
+  }
+  .job-field{flex:1; min-width:220px; display:flex; flex-direction:column; gap:4px;}
+  .job-field label{font-size:.75rem; opacity:.85; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+  .job-field input{
+    padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.12); color:#fff; font-size:.9rem;
+  }
+  .job-field input::placeholder{color:rgba(255,255,255,.6);}
+  .job-field input:focus{outline:2px solid var(--accent); background:rgba(255,255,255,.2);}
+  .findings-block{margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);}
+  .findings-label{
+    display:block; font-size:.78rem; font-weight:700; color:var(--red); text-transform:uppercase;
+    letter-spacing:.03em; margin-bottom:6px;
+  }
+  .findings-input{
+    width:100%; min-height:64px; resize:vertical; border:1px solid var(--border); border-radius:6px;
+    padding:8px 10px; font-family:inherit; font-size:.88rem; color:var(--text); background:#fbfcfd;
+  }
+  .findings-input:focus{outline:2px solid var(--blue); background:#fff;}
+  .summary-jobinfo{
+    display:flex; gap:20px; flex-wrap:wrap; margin:10px 0 4px; font-size:.85rem;
+  }
+  .summary-jobinfo strong{color:var(--navy);}
+  .findings-report h3{font-size:.9rem; color:var(--red); margin:0 0 6px; border-bottom:1px solid var(--border); padding-bottom:4px;}
+  .findings-report .finding-entry{margin-bottom:10px;}
+  .findings-report .finding-entry .sec-title{font-size:.85rem; font-weight:700; display:block; margin-bottom:2px;}
+  .findings-report .finding-entry p{margin:0; font-size:.85rem; white-space:pre-wrap;}
   @media print{
     header, .toolbar, .close-row, .section-header .chevron{display:none !important;}
     .summary-overlay{position:static; background:none; padding:0;}
@@ -107,6 +136,16 @@
 <header>
   <h1>Retrofit Solar Design Checklist</h1>
   <p>Site review through permit-ready plans — code compliance, constructability, and quality</p>
+  <div class="job-info">
+    <div class="job-field">
+      <label for="jobNumber">Job #</label>
+      <input type="text" id="jobNumber" placeholder="Enter job number">
+    </div>
+    <div class="job-field">
+      <label for="jobAddress">Address</label>
+      <input type="text" id="jobAddress" placeholder="Enter project address">
+    </div>
+  </div>
   <div class="progress-wrap">
     <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
     <div class="progress-label"><span id="progressText">0 / 0 items complete</span><span id="progressPct">0%</span></div>
@@ -125,9 +164,11 @@
   <div class="summary-card">
     <h2>Checklist Summary Report</h2>
     <div id="summaryMeta" style="font-size:.8rem;color:#5a6b7d;"></div>
+    <div class="summary-jobinfo" id="summaryJobInfo"></div>
     <div class="summary-stats" id="summaryStats"></div>
     <div id="gateStatus" class="summary-section"></div>
     <div id="outstandingItems"></div>
+    <div id="findingsReport" class="summary-section findings-report"></div>
     <div class="close-row">
       <button class="btn-secondary" style="background:#eef1f4;color:#1c2b39;border:1px solid var(--border);" onclick="window.print()">Print</button>
       <button onclick="document.getElementById('summaryOverlay').classList.remove('open')">Close</button>
@@ -290,6 +331,21 @@ function saveState(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
 }
 
+function escapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function initJobInfo(){
+  const jobNumberEl = document.getElementById('jobNumber');
+  const jobAddressEl = document.getElementById('jobAddress');
+  jobNumberEl.value = state['_jobNumber'] || '';
+  jobAddressEl.value = state['_jobAddress'] || '';
+  jobNumberEl.addEventListener('input', e=>{ state['_jobNumber'] = e.target.value; saveState(); });
+  jobAddressEl.addEventListener('input', e=>{ state['_jobAddress'] = e.target.value; saveState(); });
+}
+
 function flatItems(section){
   if(section.items) return section.items.map((t,i)=>({key:section.id+'-i'+i, text:t}));
   let out=[];
@@ -329,6 +385,19 @@ function renderMain(){
         g.items.forEach((text,i)=> body.appendChild(makeItem(section.id+'-g'+gi+'-i'+i, text)));
       });
     }
+
+    const findingsBlock = document.createElement('div');
+    findingsBlock.className = 'findings-block';
+    const findingsKey = 'notes_' + section.id;
+    findingsBlock.innerHTML = `
+      <label class="findings-label" for="${findingsKey}">Findings / Red Flags</label>
+      <textarea class="findings-input" id="${findingsKey}" placeholder="Log any findings or red flags for this section...">${state[findingsKey] ? escapeHtml(state[findingsKey]) : ''}</textarea>`;
+    const findingsTextarea = findingsBlock.querySelector('textarea');
+    findingsTextarea.addEventListener('input', e=>{
+      state[findingsKey] = e.target.value;
+      saveState();
+    });
+    body.appendChild(findingsBlock);
 
     wrap.appendChild(header);
     wrap.appendChild(body);
@@ -403,6 +472,12 @@ function buildSummary(){
   document.getElementById('summaryMeta').textContent =
     'Generated ' + new Date().toLocaleString();
 
+  const jobNumber = (state['_jobNumber'] || '').trim();
+  const jobAddress = (state['_jobAddress'] || '').trim();
+  document.getElementById('summaryJobInfo').innerHTML =
+    `<div><strong>Job #:</strong> ${jobNumber ? escapeHtml(jobNumber) : '<em style="color:#8a97a6;">Not entered</em>'}</div>` +
+    `<div><strong>Address:</strong> ${jobAddress ? escapeHtml(jobAddress) : '<em style="color:#8a97a6;">Not entered</em>'}</div>`;
+
   document.getElementById('summaryStats').innerHTML = `
     <div class="stat-box"><div class="num">${pct}%</div><div class="lbl">Overall Complete</div></div>
     <div class="stat-box"><div class="num">${totalDone}</div><div class="lbl">Items Checked</div></div>
@@ -437,6 +512,23 @@ function buildSummary(){
           <ul>${s.missing.map(m=>`<li>${m.text}${m.group?` <em style="color:#8a97a6;">(${m.group})</em>`:''}</li>`).join('')}</ul>
         </div>`).join('') + '</div>';
   }
+
+  // Findings / red flags report
+  const findingsEl = document.getElementById('findingsReport');
+  const findingEntries = DATA
+    .map(section => ({ title: section.title, note: (state['notes_' + section.id] || '').trim() }))
+    .filter(f => f.note.length > 0);
+
+  if (findingEntries.length === 0) {
+    findingsEl.innerHTML = '<h3>Findings / Red Flags</h3><p style="font-size:.85rem;color:#8a97a6;">No findings or red flags logged.</p>';
+  } else {
+    findingsEl.innerHTML = '<h3>Findings / Red Flags</h3>' +
+      findingEntries.map(f => `
+        <div class="finding-entry">
+          <span class="sec-title">${escapeHtml(f.title)}</span>
+          <p>${escapeHtml(f.note)}</p>
+        </div>`).join('');
+  }
 }
 
 document.getElementById('summaryBtn').addEventListener('click', ()=>{
@@ -453,17 +545,20 @@ document.getElementById('collapseBtn').addEventListener('click', ()=>{
   document.querySelectorAll('.section').forEach(s=>s.classList.add('collapsed'));
 });
 document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(confirm('Reset all checklist progress? This cannot be undone.')){
+  if(confirm('Reset all checklist progress, findings, and job info? This cannot be undone.')){
     state = {};
     saveState();
     renderMain();
     updateProgress();
+    document.getElementById('jobNumber').value = '';
+    document.getElementById('jobAddress').value = '';
   }
 });
 
 loadState();
 renderMain();
 updateProgress();
+initJobInfo();
 </script>
 </body>
 </html>
